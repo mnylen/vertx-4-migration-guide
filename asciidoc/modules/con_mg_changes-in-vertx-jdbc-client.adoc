@@ -239,3 +239,36 @@ In the JDBC client, the data types have been updated.
 * For an argument of type `OUT`, you can specify its return type. In the example, the `OUT` argument is specified as type `VARCHAR` which is a JDBC constant.
 
 * The types are not bound by JSON limitations. You can now use database specific types instead of text constants for the type name.
+
+== Legacy JDBC Client API and MySQL Connector/J
+
+If you are planning on continuing to use the {VertX} {v3x} APIs and are using MySQL Connector/J, you need to do some additional migration work.
+
+{VertX} {v4} uses parameter metadata produced by the JDBC driver to determine how to encode JSON primitives to Java for prepared statements. MySQL Connector/J does not automatically generate parameter metadata for prepared statements.
+
+It's possible to enable this feature in MySQL Connector/J by adding `generateSimpleParameterMetadata=true` to connection string:
+
+[source,java]
+----
+JsonObject jsonConfig = new JsonObject()
+   .put(/* other options */)
+   .put("url", "jdbc:mysql://<host>/<database>?generateSimpleParameterMetadata=true");
+
+SQLClient client = JDBCClient.create(vertx, jsonConfig);
+----
+
+Unfortunately the support for parameter metadata in MySQL Connector/J is (as the name implies) quite rudimentary. Most notably, you might face issues with datetime/date/time related values. A workaround for these is to implement a custom `JDBCEncoder` (inheriting from `io.vertx.ext.jdbc.spi.impl.JDBCEncoderImpl`).
+
+You might also face similar issues when querying rows. {VertX} {v3} APIs return rows as `JsonObject`s, and some data types from the new decoder can't be converted to JSON primitives. A workaround for these is to implement a custom `JDBCDecoder` (inhering from `io.vertx.ext.jdbc.spi.impl.JDBCDecoderImpl`).
+
+To configure the custom encoder and decoder, you need to add `encoderCls` and `decoderCls` options in the `jsonConfig`:
+
+[source,java]
+----
+JsonObject jsonConfig = new JsonObject()
+   .put(/* other options */)
+   .put("encoderCls", "com.mysite.CustomJDBCEncoder")
+   .put("decoderCls", "com.mysite.CustomJDBCDecoder");
+
+SQLClient client = JDBCClient.create(vertx, jsonConfig);
+----
