@@ -132,3 +132,19 @@ The `SessionHandler.setAuthProvider(AuthProvider)` method has been deprecated. U
 == OAuth2 authentication provider create methods require `vertx` as constructor argument
 
 From {VertX} {v4}, `OAuth2Auth.create(Vertx vertx)` method requires `vertx` as a constructor argument. The `vertx` argument uses a secure non-blocking random number generator to generate nonce which ensures better security for applications.
+
+== WebClient HttpRequest does not accept empty username for basic authentication anymore
+
+In {VertX} {v4} calling `HttpRequest#basicAuthentication(String username, String password)` with empty username will result in error. If the service you are calling expects empty username, you can work around this by crafting the basic auth header yourself:
+
+[source,java]
+----
+WebClient client = WebClient.create(vertx);
+
+String basicAuthCredentials = ":" + password;
+String basicAuthHeader = "Basic " + Base64.getEncoder().encodeToString(basicAuthCredentials.getBytes(StandardCharsets.UTF-8));
+
+client.postAbs(url)
+  .putHeader("Authorization", basicAuthHeader)
+----
+
